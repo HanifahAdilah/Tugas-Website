@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Momentum Simulation</title>
+  <style>
+    * {
+      transition: all .3s ease;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f8f8;
+      color: #121212;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    canvas {
+      background: #ffffff;
+      border: 1px solid #cccccc;
+      border-radius: 12px;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, .2);
+      margin-bottom: 20px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+
+    button {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+    }
+
+    button:hover {
+      background: #3b82f6;
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      width: 100%;
+      max-width: 1000px;
+      margin-bottom: 25px;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+      background: #f0f0f0;
+      border: 1px solid #d0d0d0;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+    }
+
+    .control label {
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 5px;
+      background: #ddd;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #3b82f6;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+    }
+
+    footer {
+      color: #333;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Momentum Simulation</h1>
+  <p id="momentumText" style="margin-top:0px; font-size:18px;">Momentum total: 0 kg·m/s</p>
+  <canvas id="canvas" width="1000" height="400"></canvas>
+
+  <div class="button-group">
+    <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="mass1">Massa Bola 1 (kg): <span id="mass1Val">5</span></label>
+      <input type="range" id="mass1" min="1" max="10" value="5" step="0.1">
+    </div>
+    <div class="control">
+      <label for="mass2">Massa Bola 2 (kg): <span id="mass2Val">5</span></label>
+      <input type="range" id="mass2" min="1" max="10" value="5" step="0.1">
+    </div>
+    <div class="control">
+      <label for="vel1">Kecepatan Bola 1 (m/s): <span id="vel1Val">2</span></label>
+      <input type="range" id="vel1" min="-10" max="10" value="0" step="0.1">
+    </div>
+    <div class="control">
+      <label for="vel2">Kecepatan Bola 2 (m/s): <span id="vel2Val">-2</span></label>
+      <input type="range" id="vel2" min="-10" max="10" value="0" step="0.1">
+    </div>
+  </div>
+
+  <footer>
+    © <span id="year"></span> Momentum Simulation by Adilah & Vera. All rights reserved.
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const momentumText = document.getElementById('momentumText');
+
+    const m1Slider = document.getElementById('mass1');
+    const m2Slider = document.getElementById('mass2');
+    const v1Slider = document.getElementById('vel1');
+    const v2Slider = document.getElementById('vel2');
+
+    const labels = {
+      mass1Val: document.getElementById('mass1Val'),
+      mass2Val: document.getElementById('mass2Val'),
+      vel1Val: document.getElementById('vel1Val'),
+      vel2Val: document.getElementById('vel2Val')
+    };
+
+    let isRunning = false;
+    let animationId;
+
+    let ball1 = { x: 300, y: 200, r: m1Slider.value ** 2, color: '#3b82f6' };
+    let ball2 = { x: 700, y: 200, r: m2Slider.value ** 2, color: '#ef4444' };
+
+    function updateLabels() {
+      labels.mass1Val.textContent = m1Slider.value;
+      labels.mass2Val.textContent = m2Slider.value;
+      labels.vel1Val.textContent = v1Slider.value;
+      labels.vel2Val.textContent = v2Slider.value;
+      ball1.r = m1Slider.value ** 2;
+      ball2.r = m2Slider.value ** 2;
+      draw();
+    }
+
+    [m1Slider, m2Slider, v1Slider, v2Slider].forEach(slider => {
+      slider.addEventListener('input', updateLabels);
+    });
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = ball1.color;
+      ctx.beginPath();
+      ctx.arc(ball1.x, ball1.y, ball1.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = ball2.color;
+      ctx.beginPath();
+      ctx.arc(ball2.x, ball2.y, ball2.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function detectCollision() {
+      const dist = Math.abs(ball1.x - ball2.x);
+      return dist <= ball1.r + ball2.r;
+    }
+
+    function elasticCollision() {
+      const m1 = parseFloat(m1Slider.value);
+      const m2 = parseFloat(m2Slider.value);
+      const u1 = parseFloat(v1Slider.value);
+      const u2 = parseFloat(v2Slider.value);
+
+      const v1f = ((m1 - m2) / (m1 + m2)) * u1 + (2 * m2 / (m1 + m2)) * u2;
+      const v2f = (2 * m1 / (m1 + m2)) * u1 + ((m2 - m1) / (m1 + m2)) * u2;
+
+      v1Slider.value = v1f;
+      v2Slider.value = v2f;
+      updateLabels();
+    }
+
+    function animate() {
+      const dt = 1 / 60;
+      let v1 = parseFloat(v1Slider.value);
+      let v2 = parseFloat(v2Slider.value);
+
+      ball1.x += v1 * 10 * dt;
+      ball2.x += v2 * 10 * dt;
+
+      if (ball1.x - ball1.r <= 0 || ball1.x + ball1.r >= canvas.width) {
+        v1Slider.value = -v1;
+      }
+      if (ball2.x - ball2.r <= 0 || ball2.x + ball2.r >= canvas.width) {
+        v2Slider.value = -v2;
+      }
+
+      if (detectCollision()) {
+        elasticCollision();
+      }
+
+      const p1 = parseFloat(m1Slider.value) * parseFloat(v1Slider.value);
+      const p2 = parseFloat(m2Slider.value) * parseFloat(v2Slider.value);
+      const p_total = p1 + p2;
+
+      momentumText.textContent = `Momentum total: ${p_total.toFixed(2)} kg·m/s`;
+
+      draw();
+      if (isRunning) animationId = requestAnimationFrame(animate);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      if (!isRunning) {
+        isRunning = true;
+        animate();
+      }
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => {
+      isRunning = false;
+      cancelAnimationFrame(animationId);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      ball1.x = 300;
+      ball2.x = 700;
+      m1Slider.value = 5;
+      m2Slider.value = 5;
+      updateLabels();
+    });
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+    updateLabels();
+    draw();
+  </script>
+</body>
+
+</html>
